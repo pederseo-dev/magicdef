@@ -106,11 +106,45 @@ class MagicDef {
         
       }
       
-      //si recibe un mensaje de tipo {callFunction:functionName} llamar a la funcion y enviar el resultado
-      if (parsedMessage.type === 'callFunction') {
+      //si recibe un mensaje de tipo {callFunction:{functionName,parameters}} llamar a la funcion
+      if (parsedMessage.callFunction) {
+        console.log(`📨 Mensaje recibido:`, JSON.stringify(parsedMessage, null, 2))
+        const { functionName, parameters } = parsedMessage.callFunction
+        console.log(`📨 Recibida llamada a función: ${functionName}(${parameters.join(', ')})`)
+        
         // si el nombre esta dentro de ownFunctions ejecutar la funcion
-        if (MagicDef.ownfunctions[parsedMessage.data.functionName]) {
-          console.log(`ejecutar funcion`)
+        if (MagicDef.ownfunctions[functionName]) {
+          console.log(`✅ Ejecutando función local: ${functionName}`)
+          
+          try {
+            // Ejecutar la función
+            const resultado = MagicDef.ownfunctions[functionName](...parameters)
+            
+            // Si la función retorna algo, enviar respuesta a todos los peers
+            if (resultado !== undefined) {
+              console.log(`📤 Enviando resultado: ${resultado}`)
+              const responseMessage = {
+                return: resultado
+              }
+              MagicDef.sendMessage(JSON.stringify(responseMessage))
+            }
+          } catch (error) {
+            console.log(`❌ Error ejecutando función: ${error.message}`)
+          }
+        } else {
+          console.log(`❌ Función '${functionName}' no encontrada en funciones propias`)
+        }
+      }
+      
+      //si recibe un mensaje de tipo {return:resultado} procesar respuesta
+      if (parsedMessage.return !== undefined) {
+        console.log(`📨 Respuesta recibida: ${parsedMessage.return}`)
+        
+        // Si hay una respuesta pendiente, resolverla
+        if (MagicDef._pendingResponse) {
+          clearTimeout(MagicDef._pendingResponse.timeout)
+          MagicDef._pendingResponse.resolve(parsedMessage.return)
+          MagicDef._pendingResponse = null
         }
       }
     } catch (error) {
@@ -277,6 +311,63 @@ class MagicDef {
 }
 
 // ========================================
+// PROXY PARA MÉTODOS DINÁMICOS
+// ========================================
+const MagicDefProxy = new Proxy(MagicDef, {
+  get(target, prop) {
+    // Si la propiedad existe en MagicDef, usarla
+    if (prop in target) {
+      return target[prop]
+    }
+    
+    // Si no existe, crear función dinámica
+    return (...args) => {
+      // Caso 1: No hay peers conectados
+      if (swarm.connections.size === 0) {
+        console.log(`❌ No hay peers conectados`)
+        return Promise.resolve(undefined)
+      }
+      
+      // Caso 2: Hay peers pero no hay funciones
+      const peerFunctions = Object.values(MagicDef.nodesFunctions).flat()
+      if (peerFunctions.length === 0) {
+        console.log(`❌ No hay peer functions`)
+        return Promise.resolve(undefined)
+      }
+      
+      // Caso 3: Hay peer functions, buscar la función específica
+      const functionExists = peerFunctions.some(func => func.functionName === prop)
+      if (functionExists) {
+        console.log(`✅ Función '${prop}' ejecutada con parámetros: [${args.join(', ')}]`)
+        
+        // Enviar mensaje a todos los peers
+        const message = {
+          callFunction: {
+            functionName: prop,
+            parameters: args
+          }
+        }
+        MagicDef.sendMessage(JSON.stringify(message))
+        
+        // Retornar Promise que se resuelve automáticamente
+        return new Promise((resolve) => {
+          const timeout = setTimeout(() => {
+            console.log(`⏰ Timeout: No se recibió respuesta para ${prop}`)
+            resolve(undefined)
+          }, 5000)
+          
+          // Guardar callback temporal para recibir respuesta
+          MagicDef._pendingResponse = { resolve, timeout, functionName: prop }
+        })
+      } else {
+        console.log(`❌ Función '${prop}' no encontrada en peer functions`)
+        return Promise.resolve(undefined)
+      }
+    }
+  }
+})
+
+// ========================================
 // EXPORTAR
 // ========================================
-export default MagicDef
+export default MagicDefProxy
