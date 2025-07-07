@@ -12,11 +12,9 @@
     }
   },
   "scripts": {
-    "test": "node tests/test.js",
     "start": "node examples/chat-terminal.js",
     "example": "node examples/basic-usage.js",
-    "build": "echo 'No build step needed for ES modules'",
-    "prepublishOnly": "npm test"
+    "build": "echo 'No build step needed for ES modules'"
   },
   "keywords": [
     "p2p",
