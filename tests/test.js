@@ -3,6 +3,9 @@ import MagicDef from '../src/magicdef.js'
 
 console.log('🧪 Running MagicDef tests...')
 
+// Wrap tests in async function
+async function runTests() {
+
 // Test 1: Basic function export
 console.log('\n📝 Test 1: Function export')
 const add = (a, b) => a + b
@@ -20,7 +23,7 @@ console.log('✅ Function metadata test passed')
 
 // Test 3: Local function call
 console.log('\n📝 Test 3: Local function call')
-const result = MagicDef.callFunction('add', 5, 3)
+const result = await MagicDef.add(5, 3)
 assert(result === 8, 'Function should return correct result')
 console.log('✅ Local function call test passed')
 
@@ -30,4 +33,8 @@ const functions = MagicDef.listFunctions()
 assert(functions.own.includes('add'), 'Own functions should include exported function')
 console.log('✅ List functions test passed')
 
-console.log('\n🎉 All tests passed!') 
+console.log('\n🎉 All tests passed!')
+}
+
+// Run tests
+runTests().catch(console.error) 
