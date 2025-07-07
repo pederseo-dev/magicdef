@@ -1,0 +1,54 @@
+{
+  "name": "magicdef",
+  "version": "1.0.0",
+  "description": "Peer-to-peer function sharing library using Hyperswarm",
+  "main": "./dist/magicdef.cjs",
+  "module": "./src/magicdef.js",
+  "type": "module",
+  "exports": {
+    ".": {
+      "import": "./src/magicdef.js",
+      "require": "./dist/magicdef.cjs"
+    }
+  },
+  "scripts": {
+    "test": "node tests/test.js",
+    "start": "node examples/chat-terminal.js",
+    "example": "node examples/basic-usage.js",
+    "build": "echo 'No build step needed for ES modules'",
+    "prepublishOnly": "npm test"
+  },
+  "keywords": [
+    "p2p",
+    "peer-to-peer",
+    "distributed",
+    "functions",
+    "hyperswarm",
+    "magicdef"
+  ],
+  "author": "MagicDef Contributors",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/pederseo-dev/magicdef.git"
+  },
+  "bugs": {
+    "url": "https://github.com/pederseo-dev/magicdef/issues"
+  },
+  "homepage": "https://github.com/pederseo-dev/magicdef#readme",
+  "files": [
+    "src/",
+    "dist/",
+    "examples/",
+    "docs/",
+    "README.md",
+    "LICENSE"
+  ],
+  "dependencies": {
+    "hyperswarm": "^4.11.7",
+    "b4a": "^1.6.7"
+  },
+  "devDependencies": {
+    "assert": "^2.1.0"
+  }
+} 

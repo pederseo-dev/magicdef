@@ -1,4 +1,4 @@
-import MagicDef from './magicdef.js'
+import MagicDef from '../src/magicdef.js'
 
 MagicDef.connect('topic123')
 
