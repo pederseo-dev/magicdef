@@ -1,7 +1,88 @@
-import Hyperswarm from 'hyperswarm'
-import b4a from 'b4a'
+const Hyperswarm = require('hyperswarm')
+const b4a = require('b4a')
 
 // CONFIGURACIÓN INICIAL
+
+function handleLocalFunction(target, prop, args) {
+  if (target.ownfunctions[prop]) {
+    try {
+      const resultado = target.ownfunctions[prop](...args)
+      return Promise.resolve(resultado)
+    } catch (error) {
+      return Promise.resolve({
+        error: true,
+        type: 'LOCAL_ERROR',
+        message: error.message,
+        function: prop,
+        args
+      })
+    }
+  }
+  return null
+}
+
+function handleNoPeers(target, prop, args) {
+  if (target.swarm.connections.size === 0) {
+    return Promise.resolve({
+      error: true,
+      type: 'NO_PEERS',
+      message: 'No hay peers conectados',
+      function: prop,
+      args
+    })
+  }
+  return null
+}
+
+function handleNoFunctions(target, prop, args) {
+  const peerFunctions = Object.values(target.nodesFunctions).flat()
+  if (peerFunctions.length === 0) {
+    return Promise.resolve({
+      error: true,
+      type: 'NO_FUNCTIONS',
+      message: 'No hay funciones disponibles en la red',
+      function: prop,
+      args
+    })
+  }
+  return peerFunctions
+}
+
+function handleRemoteFunction(target, prop, args, peerFunctions) {
+  const functionExists = peerFunctions.some(func => func.functionName === prop)
+  if (functionExists) {
+    const message = {
+      callFunction: {
+        functionName: prop,
+        parameters: args
+      }
+    }
+    sendMessage(target, JSON.stringify(message))
+    
+    return new Promise((resolve) => {
+      const timeout = setTimeout(() => {
+        resolve({
+          error: true,
+          type: 'TIMEOUT',
+          message: `Timeout: No se recibió respuesta para ${prop}`,
+          function: prop,
+          args
+        })
+      }, 5000)
+      
+      target._pendingResponse = { resolve, timeout, functionName: prop }
+    })
+  }
+  
+  return Promise.resolve({
+    error: true,
+    type: 'FUNCTION_NOT_FOUND',
+    message: `Función '${prop}' no encontrada en la red`,
+    function: prop,
+    args,
+    availableFunctions: peerFunctions.map(f => f.functionName)
+  })
+}
 
 function analyzer(...funcs) {
     const functionsMetadata = []
@@ -195,97 +276,28 @@ class MagicDef {
     // Configurar detección de peers inmediatamente
     setupPeerDetection(this)
     
-    // proxy para crear metodos dinamicos de cada instancia
     return new Proxy(this, {
-        get(target, prop) {
-          // Si la propiedad existe en MagicDef, usarla
-          if (prop in target) {
-            return target[prop]
-          }
+      get(target, prop) {
+        if (prop in target) {
+          return target[prop]
+        }
+        
+        return (...args) => {
+          const localResult = handleLocalFunction(target, prop, args)
+          if (localResult) return localResult
           
-          // Si no existe, crear función dinámica
-          return (...args) => {
-            // Caso 0: Verificar si la función existe localmente primero
-            if (target.ownfunctions[prop]) {
-              try {
-                const resultado = target.ownfunctions[prop](...args)
-                return Promise.resolve(resultado)
-              } catch (error) {
-                return Promise.resolve({
-                  error: true,
-                  type: 'LOCAL_ERROR',
-                  message: error.message,
-                  function: prop,
-                  args
-                })
-              }
-            }
-            
-            // Caso 1: No hay peers conectados
-            if (target.swarm.connections.size === 0) {
-              return Promise.resolve({
-                error: true,
-                type: 'NO_PEERS',
-                message: 'No hay peers conectados',
-                function: prop,
-                args
-              })
-            }
-            
-            // Caso 2: Hay peers pero no hay funciones
-            const peerFunctions = Object.values(target.nodesFunctions).flat()
-            if (peerFunctions.length === 0) {
-              return Promise.resolve({
-                error: true,
-                type: 'NO_FUNCTIONS',
-                message: 'No hay funciones disponibles en la red',
-                function: prop,
-                args
-              })
-            }
-            
-            // Caso 3: Hay peer functions, buscar la función específica
-            const functionExists = peerFunctions.some(func => func.functionName === prop)
-            if (functionExists) {
-              // Enviar mensaje a todos los peers
-              const message = {
-                callFunction: {
-                  functionName: prop,
-                  parameters: args
-                }
-              }
-              sendMessage(target, JSON.stringify(message))
-              
-              // Retornar Promise que se resuelve automáticamente
-              return new Promise((resolve) => {
-                const timeout = setTimeout(() => {
-                  resolve({
-                    error: true,
-                    type: 'TIMEOUT',
-                    message: `Timeout: No se recibió respuesta para ${prop}`,
-                    function: prop,
-                    args
-                  })
-                }, 5000)
-                
-                // Guardar callback temporal para recibir respuesta
-                target._pendingResponse = { resolve, timeout, functionName: prop }
-              })
-            } else {
-              return Promise.resolve({
-                error: true,
-                type: 'FUNCTION_NOT_FOUND',
-                message: `Función '${prop}' no encontrada en la red`,
-                function: prop,
-                args,
-                availableFunctions: peerFunctions.map(f => f.functionName)
-              })
-            }
-          }
+          const noPeersResult = handleNoPeers(target, prop, args)
+          if (noPeersResult) return noPeersResult
+          
+          const peerFunctions = handleNoFunctions(target, prop, args)
+          if (typeof peerFunctions === 'object' && peerFunctions.error) return peerFunctions
+          
+          return handleRemoteFunction(target, prop, args, peerFunctions)
         }
       }
-     )  
-    }
+    })  
+  }
+
   async connect(topic){
     // Convertir topic a buffer
     const crypto = await import('crypto')
@@ -296,7 +308,6 @@ class MagicDef {
     
     await discovery.flushed()
   }
-
 
   export(...funcs){
     // Limpiar funciones anteriores
@@ -318,16 +329,8 @@ class MagicDef {
       sendMessage(this, JSON.stringify(message))
     }
   }
-
-
-  
-
-  
-  
 } 
 
-export default MagicDef
+module.exports = MagicDef
 
-
-// Ejemplo de uso
 

@@ -1,20 +1,21 @@
-import MagicDef from '../src/magicdef.js'
+import MagicDef from '../src/index.js'
 
-MagicDef.connect('topic123')
+const md = new MagicDef()
+md.connect('topic123')
 
 function resta(a, b) {
   return a - b
 }
 
-MagicDef.export(resta)
+md.export(resta)
 
 
 // Primera llamada - fallará inmediatamente
-MagicDef.resta(1,2)
+md.resta(1,2)
 
 
 // Segunda llamada - esperará 10 segundos
 setTimeout(async () => {
-  const res = await MagicDef.resta(1,2)
-  console.log('respuesta del peer',res)
-}, 20000) // Esperar 2 segundos para que se carguen las funciones 
+  const res = await md.multiplicacion(1,2)
+  console.log('respuesta del desde peer 2',res)
+}, 10000) // Esperar 2 segundos para que se carguen las funciones 

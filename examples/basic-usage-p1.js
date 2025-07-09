@@ -1,7 +1,7 @@
-import MagicDef from '../src/magicdef.js'
+import MagicDef from '../src/index.js'
 
-
-MagicDef.connect('topic123')
+const md = new MagicDef()
+md.connect('topic123')
 
 
 function multiplicacion(a, b) {
@@ -13,10 +13,10 @@ function resta(a, b) {
   return a - b
 }
 
-MagicDef.export(multiplicacion, resta)
+md.export(multiplicacion, resta)
 
 async function test() {
-  const res = await MagicDef.resta(1,2)
+  const res = await md.resta(1,2)
   console.log('respuesta del peer',res)
 }
 test()
