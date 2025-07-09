@@ -53,72 +53,47 @@ function analyzer(...funcs) {
     return functionsMetadata
 }
 
-// Función externa para manejar mensajes recibidos
-function handleMessage(message, peerName, nodesFunctions, ownfunctions, swarm) {
-  // Intentar parsear como JSON
-  try {
-    const parsedMessage = JSON.parse(message)
-    
-    // Manejar carga de funciones de peers
-    loadPeerFunctions(parsedMessage, peerName, nodesFunctions)
-    
-    // Manejar llamadas de función
-    executeFunctionCall(parsedMessage, ownfunctions, swarm)
-    
-  } catch (error) {
-    console.error('Error al manejar el mensaje:', error)
-  }
-}
-
 // Función externa para enviar mensaje a todos los peers
-function sendMessage(message, swarm) {
-  const peers = [...swarm.connections]
+function sendMessage(magicDef, message) {
+  const peers = [...magicDef.swarm.connections]
   
   for (const peer of peers) {
     peer.write(message)
   }
 }
 
-// Función externa para cargar funciones de peers
-function loadPeerFunctions(parsedMessage, peerName, nodesFunctions) {
-  if (!parsedMessage.ownfunctions) return
-  
+function loadFunctions(magicDef, peerName, parsedMessage){
   const peerId = peerName // Usar el peerName como ID
-  
+        
   // Verificar si ya tenemos funciones de este peer
-  if (nodesFunctions[peerId]) {
+  if (magicDef.nodesFunctions[peerId]) {
     return
   }
   
   // Inicializar array de funciones para este peer
-  nodesFunctions[peerId] = []
+  magicDef.nodesFunctions[peerId] = []
   
   // Agregar cada función del mensaje
   parsedMessage.ownfunctions.forEach(func => {
-    nodesFunctions[peerId].push(func)
+    magicDef.nodesFunctions[peerId].push(func)
   })
-  
-  // Silencioso - funciones cargadas automáticamente
 }
 
-// Función externa para ejecutar llamadas de función
-function executeFunctionCall(parsedMessage, ownfunctions, swarm) {
-  if (!parsedMessage.callFunction) return
-  
+function callFunction(magicDef, parsedMessage){
   const { functionName, parameters } = parsedMessage.callFunction
-  
+        
   // si el nombre esta dentro de ownFunctions ejecutar la funcion
-  if (ownfunctions[functionName]) {
+  if (magicDef.ownfunctions[functionName]) {
     try {
       // Ejecutar la función
-      const resultado = ownfunctions[functionName](...parameters)
+      const resultado = magicDef.ownfunctions[functionName](...parameters)
       
       // Si la función retorna algo, enviar respuesta a todos los peers
       if (resultado !== undefined) {
         const responseMessage = {
           return: resultado
         }
-        sendMessage(JSON.stringify(responseMessage), swarm)
+        sendMessage(magicDef, JSON.stringify(responseMessage))
       }
     } catch (error) {
       // Solo mostrar errores si la función los lanza
@@ -129,17 +104,225 @@ function executeFunctionCall(parsedMessage, ownfunctions, swarm) {
   }
 }
 
+function returnMessage(magicDef, parsedMessage){
+  // Si hay una respuesta pendiente, resolverla
+  if (magicDef._pendingResponse) {
+    clearTimeout(magicDef._pendingResponse.timeout)
+    magicDef._pendingResponse.resolve(parsedMessage.return)
+    magicDef._pendingResponse = null
+  }
+}
+
+function removePeerFunctions(magicDef, peerName) {
+  if (magicDef.nodesFunctions[peerName]) {
+    delete magicDef.nodesFunctions[peerName]
+  }
+}
+
+function setupPeerDetection(magicDef) {
+  // Cuando se conecta un peer
+  magicDef.swarm.on('connection', (peer) => {
+    const peerId = b4a.toString(peer.remotePublicKey, 'hex')
+    const peerName = peerId.substr(0, 6)
+    
+    // Enviar funciones al peer que se acaba de conectar
+    if (Object.keys(magicDef.ownfunctions).length > 0) {
+      const functionsMetadata = analyzer(...Object.values(magicDef.ownfunctions))
+      const message = {
+        ownfunctions: functionsMetadata
+      }
+      peer.write(JSON.stringify(message))
+    }
+    
+    // Cuando recibimos datos
+    peer.on('data', (data) => {
+      const message = data.toString()
+      handleMessage(magicDef, message, peerName)
+    })
+    
+    // Si hay error
+    peer.on('error', e => {
+      // Silencioso - manejar errores internamente
+    })
+    
+    // Cuando se desconecta
+    peer.on('close', () => {
+      // Remover las funciones del peer desconectado
+      removePeerFunctions(magicDef, peerName)
+    })
+  })
+  
+  // Escuchar actualizaciones del swarm
+  magicDef.swarm.on('update', () => {
+    // Silencioso
+  })
+}
+
+// funcion para manejar mensajes recibidos
+function handleMessage(magicDef, message, peerName) {
+    // Intentar parsear como JSON
+    try {
+      const parsedMessage = JSON.parse(message)
+      
+      // si se recibe un mensaje con {ownfunctions:[]} cargar las funciones en nodesFunctions
+      if (parsedMessage.ownfunctions) {
+        loadFunctions(magicDef, peerName, parsedMessage)
+      }
+      
+      //si recibe un mensaje de tipo {callFunction:{functionName,parameters}} llamar a la funcion
+      if (parsedMessage.callFunction) {
+        callFunction(magicDef, parsedMessage)
+      }
+      
+      //si recibe un mensaje de tipo {return:resultado} procesar respuesta
+      if (parsedMessage.return !== undefined) {
+        returnMessage(magicDef, parsedMessage)
+      }
+    } catch (error) {
+      // Silencioso - ignorar mensajes no JSON
+    }
+  }
+
+
+
 class MagicDef {
   constructor() {
     this.swarm = new Hyperswarm()
     this.ownfunctions = {}
     this.nodesFunctions = {}
     this.peerDetectionSetup = false
+    
+    // Configurar detección de peers inmediatamente
+    setupPeerDetection(this)
+    
+    // proxy para crear metodos dinamicos de cada instancia
+    return new Proxy(this, {
+        get(target, prop) {
+          // Si la propiedad existe en MagicDef, usarla
+          if (prop in target) {
+            return target[prop]
+          }
+          
+          // Si no existe, crear función dinámica
+          return (...args) => {
+            // Caso 0: Verificar si la función existe localmente primero
+            if (target.ownfunctions[prop]) {
+              try {
+                const resultado = target.ownfunctions[prop](...args)
+                return Promise.resolve(resultado)
+              } catch (error) {
+                return Promise.resolve({
+                  error: true,
+                  type: 'LOCAL_ERROR',
+                  message: error.message,
+                  function: prop,
+                  args
+                })
+              }
+            }
+            
+            // Caso 1: No hay peers conectados
+            if (target.swarm.connections.size === 0) {
+              return Promise.resolve({
+                error: true,
+                type: 'NO_PEERS',
+                message: 'No hay peers conectados',
+                function: prop,
+                args
+              })
+            }
+            
+            // Caso 2: Hay peers pero no hay funciones
+            const peerFunctions = Object.values(target.nodesFunctions).flat()
+            if (peerFunctions.length === 0) {
+              return Promise.resolve({
+                error: true,
+                type: 'NO_FUNCTIONS',
+                message: 'No hay funciones disponibles en la red',
+                function: prop,
+                args
+              })
+            }
+            
+            // Caso 3: Hay peer functions, buscar la función específica
+            const functionExists = peerFunctions.some(func => func.functionName === prop)
+            if (functionExists) {
+              // Enviar mensaje a todos los peers
+              const message = {
+                callFunction: {
+                  functionName: prop,
+                  parameters: args
+                }
+              }
+              sendMessage(target, JSON.stringify(message))
+              
+              // Retornar Promise que se resuelve automáticamente
+              return new Promise((resolve) => {
+                const timeout = setTimeout(() => {
+                  resolve({
+                    error: true,
+                    type: 'TIMEOUT',
+                    message: `Timeout: No se recibió respuesta para ${prop}`,
+                    function: prop,
+                    args
+                  })
+                }, 5000)
+                
+                // Guardar callback temporal para recibir respuesta
+                target._pendingResponse = { resolve, timeout, functionName: prop }
+              })
+            } else {
+              return Promise.resolve({
+                error: true,
+                type: 'FUNCTION_NOT_FOUND',
+                message: `Función '${prop}' no encontrada en la red`,
+                function: prop,
+                args,
+                availableFunctions: peerFunctions.map(f => f.functionName)
+              })
+            }
+          }
+        }
+      }
+     )  
+    }
+  async connect(topic){
+    // Convertir topic a buffer
+    const crypto = await import('crypto')
+    const hash = crypto.createHash('sha256').update(topic).digest('hex')
+    const topicBuffer = b4a.from(hash, 'hex')
+    // Unirse a la sala
+    const discovery = this.swarm.join(topicBuffer, { client: true, server: true })
+    
+    await discovery.flushed()
   }
-  connect(){}
-  export(){}
-  proxy(){}
-  status(){}
+
+
+  export(...funcs){
+    // Limpiar funciones anteriores
+    this.ownfunctions = {}
+    
+    // Analizar y almacenar las funciones
+    const functionsMetadata = analyzer(...funcs)
+    
+    // Almacenar funciones
+    funcs.forEach((func, index) => {
+      this.ownfunctions[functionsMetadata[index].functionName] = func
+    })
+    
+    // Enviar funciones a todos los peers ya conectados
+    if (this.swarm.connections.size > 0) {
+      const message = {
+        ownfunctions: functionsMetadata
+      }
+      sendMessage(this, JSON.stringify(message))
+    }
+  }
+
+
+  
+
+  
   
 } 
 
@@ -147,6 +330,4 @@ export default MagicDef
 
 
 // Ejemplo de uso
-const md = new MagicDef()
-
 
