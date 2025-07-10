@@ -7,7 +7,7 @@
 
 MagicDef is a JavaScript library that allows you to share and execute functions in a distributed manner on a peer-to-peer network using Hyperswarm. With MagicDef, you can create applications where multiple nodes can share their functions and execute them remotely without needing a central server.
 
-## ✨ Features
+## Features
 
 - 🔗 **Peer-to-Peer**: Direct communication between nodes without central server
 - 🚀 **Remote Execution**: Execute functions on other peers in the network
@@ -16,7 +16,7 @@ MagicDef is a JavaScript library that allows you to share and execute functions 
 - 🛡️ **No External Dependencies**: Only requires Hyperswarm for networking
 - 📦 **Easy to Use**: Simple and intuitive API
 
-## 🚀 Installation
+## Installation
 
 ### Requirements
 - **Node.js** 16.0 or higher
@@ -26,7 +26,7 @@ MagicDef is a JavaScript library that allows you to share and execute functions 
 npm install magicdef
 ```
 
-## 📖 Basic Usage
+## Basic Usage
 
 ### 1. Create Instance and Connect
 
@@ -45,16 +45,16 @@ await md.connect('my-function-room')
 
 ```javascript
 // Define functions to share
-function suma(a, b) {
+function add(a, b) {
   return a + b
 }
 
-function saludar(nombre) {
-  return `Hello, ${nombre}!`
+function greet(name) {
+  return `Hello, ${name}!`
 }
 
 // Export functions to the network
-md.export(suma, saludar)
+md.export(add, greet)
 ```
 
 ### 3. Execute Functions
@@ -62,11 +62,11 @@ md.export(suma, saludar)
 ```javascript
 async function callFunctions(){
   // Execute local or remote function (automatic)
-  const resultado = await md.suma(5, 3)
-  console.log(resultado) // 8
+  const result = await md.add(5, 3)
+  console.log(result) // 8
 
-  const saludo = await md.saludar('World')
-  console.log(saludo) // "Hello, World!"
+  const greeting = await md.greet('World')
+  console.log(greeting) // "Hello, World!"
 }
 callFunctions()
 ```
@@ -94,16 +94,16 @@ room2.export(workFunction)
 const chatRoom = new MagicDef()
 await chatRoom.connect('chat')
 
-function saludar(nombre) {
-  return `Hello ${nombre}!`
+function greet(name) {
+  return `Hello ${name}!`
 }
 
-chatRoom.export(saludar)
+chatRoom.export(greet)
 
 // Use function from Peer 2
 async function results(){
-  const resultado = await chatRoom.calcular(5, 3)
-  console.log(resultado) // 8
+  const result = await chatRoom.calculate(5, 3)
+  console.log(result) // 8
 }
 results()
 ```
@@ -114,18 +114,18 @@ results()
 const chatRoom = new MagicDef()
 await chatRoom.connect('chat')
 
-function calcular(a, b) {
+function calculate(a, b) {
   return a + b
 }
 
-chatRoom.export(calcular)
+chatRoom.export(calculate)
 
 // Use function from Peer 1
 async function results(){
-  const saludo = await chatRoom.saludar('World')
-  console.log(saludo) // "Hello World!"
+  const greeting = await chatRoom.greet('World')
+  console.log(greeting) // "Hello World!"
 }
-results
+results()
 ```
 
 ## ⚠️ Error Handling
@@ -133,11 +133,11 @@ results
 When a remote function cannot be executed, MagicDef returns an error object instead of throwing an exception:
 
 ```javascript
-const resultado = await MagicDef.funcionInexistente(1, 2)
+const result = await md.nonExistentFunction(1, 2)
 
-if (resultado.error) {
-  console.log('Error:', resultado.message)
-  console.log('Type:', resultado.type)
+if (result.error) {
+  console.log('Error:', result.message)
+  console.log('Type:', result.type)
 }
 ```
 
@@ -154,9 +154,9 @@ if (resultado.error) {
 - **Validation**: Consider validating parameters before executing functions
 - **Private networks**: Use unique topics for private networks
 
-## 🚀 Advantages of using MagicDef
+## Advantages of using MagicDef
 
-### 🌐 **Simplified Networks**
+### **Simplified Networks**
 - **Automatic configuration** - Just write your room name and you're done
 - **Works anywhere** - Home, office, cloud, no additional configuration needed
 - **No complex infrastructure** - No servers, ports or DNS needed
@@ -164,24 +164,24 @@ if (resultado.error) {
 - **Built-in encryption** - Automatic security without configuration
 - **Natural scalability** - More peers = more capacity automatically
 
-### 🔄 **Transparent Execution**
+### **Transparent Execution**
 - **No configuration** - Works locally and remotely automatically
 - **Smart proxy** - Call functions as if they were local
 - **Error handling** - Clear responses when something fails
 
-### 🏗️ **Flexible Architecture**
+### **Flexible Architecture**
 - **Multiple instances** - Each instance is independent
 - **Multiple rooms** - Different networks for different purposes
 - **Scalability** - Works with 2 or 200 peers
 
-### 💡 **Ideal Use Cases**
+### **Ideal Use Cases**
 - **Distributed microservices** - No need for API Gateway
 - **Distributed computing** - Share processing functions
 - **Collaborative chatbots** - Shared AI functions
 - **Multiplayer games** - Distributed game logic
 - **Development tools** - Share utilities between teams
 
-### 🎯 **Why MagicDef?**
+### **Why MagicDef?**
 - **No VPN needed** - Connect peers directly without tunnels
 - **No Tailscale needed** - Automatic discovery without configuration
 - **No servers needed** - P2P communication without infrastructure
@@ -190,10 +190,6 @@ if (resultado.error) {
 - **No gRPC needed** - Simple and transparent protocol
 
 ---
-
-## 📄 License
-
-This project is under the MIT License - see the [LICENSE](LICENSE) file for details.
 
 ## 🔗 Related Links
 
