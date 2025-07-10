@@ -1,264 +1,195 @@
 # MagicDef 🪄
 
-> Crear y ejecutar funciones remotas en una red peer-to-peer
+> Create and execute remote functions in a peer-to-peer network
 
 [![npm version](https://badge.fury.io/js/magicdef.svg)](https://badge.fury.io/js/magicdef)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
-MagicDef es una librería JavaScript que permite compartir y ejecutar funciones de forma distribuida en una red peer-to-peer usando Hyperswarm. Con MagicDef, puedes crear aplicaciones donde múltiples nodos pueden compartir sus funciones y ejecutarlas remotamente sin necesidad de un servidor central.
+MagicDef is a JavaScript library that allows you to share and execute functions in a distributed manner on a peer-to-peer network using Hyperswarm. With MagicDef, you can create applications where multiple nodes can share their functions and execute them remotely without needing a central server.
 
-## ✨ Características
+## ✨ Features
 
-- 🔗 **Peer-to-Peer**: Comunicación directa entre nodos sin servidor central
-- 🚀 **Ejecución Remota**: Ejecuta funciones en otros peers de la red
-- 🔍 **Descubrimiento Automático**: Encuentra automáticamente funciones disponibles
-- ⚡ **Tiempo Real**: Comunicación instantánea entre peers
-- 🛡️ **Sin Dependencias Externas**: Solo requiere Hyperswarm para networking
-- 📦 **Fácil de Usar**: API simple e intuitiva
+- 🔗 **Peer-to-Peer**: Direct communication between nodes without central server
+- 🚀 **Remote Execution**: Execute functions on other peers in the network
+- 🔍 **Auto Discovery**: Automatically find available functions
+- ⚡ **Real Time**: Instant communication between peers
+- 🛡️ **No External Dependencies**: Only requires Hyperswarm for networking
+- 📦 **Easy to Use**: Simple and intuitive API
 
-## 🚀 Instalación
+## 🚀 Installation
 
+### Requirements
+- **Node.js** 16.0 or higher
+
+### Install
 ```bash
 npm install magicdef
 ```
 
-## 📖 Uso Básico
+## 📖 Basic Usage
 
-### 1. Importar y Conectar
+### 1. Create Instance and Connect
 
-**ES Modules (Recomendado):**
+**ES Modules (Also supports CommonJS):**
 ```javascript
 import MagicDef from 'magicdef'
 
-// Conectar a la red P2P
-await MagicDef.connect('mi-sala-de-funciones')
+// Create instance for a specific room
+const md = new MagicDef()
+
+// Connect to P2P network
+await md.connect('my-function-room')
 ```
 
-**CommonJS:**
-```javascript
-const MagicDef = require('magicdef')
-
-// Conectar a la red P2P
-await MagicDef.connect('mi-sala-de-funciones')
-```
-
-### 2. Exportar Funciones
+### 2. Export Functions
 
 ```javascript
-// Definir funciones para compartir
+// Define functions to share
 function suma(a, b) {
   return a + b
 }
 
 function saludar(nombre) {
-  return `¡Hola, ${nombre}!`
+  return `Hello, ${nombre}!`
 }
 
-// Exportar funciones a la red
-MagicDef.export(suma, saludar)
+// Export functions to the network
+md.export(suma, saludar)
 ```
 
-### 3. Ejecutar Funciones
+### 3. Execute Functions
 
 ```javascript
-// Ejecutar función local o remota (automático)
-const resultado = await MagicDef.suma(5, 3)
+async function callFunctions(){
+  // Execute local or remote function (automatic)
+  const resultado = await md.suma(5, 3)
+  console.log(resultado) // 8
+
+  const saludo = await md.saludar('World')
+  console.log(saludo) // "Hello, World!"
+}
+callFunctions()
+```
+
+### 4. Multiple Instances (Optional)
+
+```javascript
+// Create multiple instances for different rooms
+const room1 = new MagicDef()
+const room2 = new MagicDef()
+
+await room1.connect('chat-room')
+await room2.connect('work-room')
+
+// Each instance is independent
+room1.export(chatFunction)
+room2.export(workFunction)
+```
+
+### 5. Example: Peer 1 vs Peer 2
+
+**Peer 1 - Chat room:**
+```javascript
+// Peer 1 - Chat room
+const chatRoom = new MagicDef()
+await chatRoom.connect('chat')
+
+function saludar(nombre) {
+  return `Hello ${nombre}!`
+}
+
+chatRoom.export(saludar)
+
+// Use function from Peer 2
+const resultado = await chatRoom.calcular(5, 3)
 console.log(resultado) // 8
+```
 
-const saludo = await MagicDef.saludar('Mundo')
-console.log(saludo) // "¡Hola, Mundo!"
+**Peer 2 - Same chat room:**
+```javascript
+// Peer 2 - Same chat room
+const chatRoom = new MagicDef()
+await chatRoom.connect('chat')
 
-// Manejar errores de ejecución
-const resultado = await MagicDef.funcionInexistente(1, 2)
-if (resultado.error) {
-  console.log('Error:', resultado.message)
-  console.log('Tipo:', resultado.type)
-  console.log('Funciones disponibles:', resultado.availableFunctions)
+function calcular(a, b) {
+  return a + b
 }
+
+chatRoom.export(calcular)
+
+// Use function from Peer 1
+const saludo = await chatRoom.saludar('World')
+console.log(saludo) // "Hello World!"
 ```
 
-## 🔧 API Completa
+## ⚠️ Error Handling
 
-### `MagicDef.connect(topic)`
-Conecta a una sala específica en la red P2P.
-
-```javascript
-await MagicDef.connect('mi-aplicacion')
-```
-
-### `MagicDef.export(...funciones)`
-Exporta funciones a la red para que otros peers puedan usarlas.
-
-```javascript
-function multiplicar(x, y) { return x * y }
-function dividir(a, b) { return a / b }
-
-MagicDef.export(multiplicar, dividir)
-```
-
-
-
-### `MagicDef.listFunctions()`
-Lista todas las funciones disponibles (propias y de peers).
-
-```javascript
-const funciones = MagicDef.listFunctions()
-console.log(funciones)
-// {
-//   own: ['suma', 'multiplicar'],
-//   peers: {
-//     'peer1': [{ functionName: 'resta', parameters: ['a', 'b'] }]
-//   }
-// }
-```
-
-### `MagicDef.sendMessage(mensaje)`
-Envía un mensaje personalizado a todos los peers conectados.
-
-```javascript
-MagicDef.sendMessage('Hola a todos los peers!')
-```
-
-### `MagicDef.resendFunctions()`
-Reenvía las funciones exportadas a todos los peers conectados.
-
-```javascript
-MagicDef.resendFunctions()
-```
-
-## 🌐 Ejecución Automática
-
-MagicDef usa un sistema de proxy que permite ejecutar funciones locales o remotas de forma transparente:
-
-```javascript
-// Ejecuta local si tienes la función, remota si la tiene otro peer
-const area = await MagicDef.calcularArea(5, 10)
-console.log(area) // 50
-
-// Siempre usa await para funciones que podrían ser remotas
-const resultado = await MagicDef.suma(1, 2)
-```
-
-## ⚠️ Manejo de Errores
-
-Cuando una función remota no puede ejecutarse, MagicDef retorna un objeto de error en lugar de lanzar una excepción:
+When a remote function cannot be executed, MagicDef returns an error object instead of throwing an exception:
 
 ```javascript
 const resultado = await MagicDef.funcionInexistente(1, 2)
 
 if (resultado.error) {
   console.log('Error:', resultado.message)
-  console.log('Tipo:', resultado.type)
-  
-  switch (resultado.type) {
-    case 'NO_PEERS':
-      console.log('No hay peers conectados')
-      break
-    case 'NO_FUNCTIONS':
-      console.log('No hay funciones disponibles')
-      break
-    case 'FUNCTION_NOT_FOUND':
-      console.log('Funciones disponibles:', resultado.availableFunctions)
-      break
-    case 'TIMEOUT':
-      console.log('La función tardó demasiado en responder')
-      break
-  }
+  console.log('Type:', resultado.type)
 }
 ```
 
-### Tipos de Error:
+### Error Types:
 
-- **`NO_PEERS`**: No hay peers conectados a la red
-- **`NO_FUNCTIONS`**: Hay peers pero no han compartido funciones
-- **`FUNCTION_NOT_FOUND`**: La función no existe en ningún peer
-- **`TIMEOUT`**: La función no respondió en 5 segundos
+- **`NO_PEERS`**: No peers connected to the network
+- **`NO_FUNCTIONS`**: There are peers but they haven't shared functions
+- **`FUNCTION_NOT_FOUND`**: The function doesn't exist in any peer
+- **`TIMEOUT`**: The function didn't respond within 5 seconds
 
-## 📝 Ejemplos
+## ⚠️ Security Considerations
+- **Code execution**: MagicDef executes code received from other peers
+- **Trust**: Only execute functions from peers you trust
+- **Validation**: Consider validating parameters before executing functions
+- **Private networks**: Use unique topics for private networks
 
-### Ejemplo 1: Calculadora Distribuida
+## 🚀 Advantages of using MagicDef
 
-```javascript
-import MagicDef from 'magicdef'
+### 🌐 **Simplified Networks**
+- **Automatic configuration** - Just write your room name and you're done
+- **Works anywhere** - Home, office, cloud, no additional configuration needed
+- **No complex infrastructure** - No servers, ports or DNS needed
+- **Direct connection** - Peers find each other automatically
+- **Built-in encryption** - Automatic security without configuration
+- **Natural scalability** - More peers = more capacity automatically
 
-// Conectar a la red
-await MagicDef.connect('calculadora-p2p')
+### 🔄 **Transparent Execution**
+- **No configuration** - Works locally and remotely automatically
+- **Smart proxy** - Call functions as if they were local
+- **Error handling** - Clear responses when something fails
 
-// Exportar funciones matemáticas
-function suma(a, b) { return a + b }
-function resta(a, b) { return a - b }
-function multiplicar(a, b) { return a * b }
-function dividir(a, b) { return a / b }
+### 🏗️ **Flexible Architecture**
+- **Multiple instances** - Each instance is independent
+- **Multiple rooms** - Different networks for different purposes
+- **Scalability** - Works with 2 or 200 peers
 
-MagicDef.export(suma, resta, multiplicar, dividir)
+### 💡 **Ideal Use Cases**
+- **Distributed microservices** - No need for API Gateway
+- **Distributed computing** - Share processing functions
+- **Collaborative chatbots** - Shared AI functions
+- **Multiplayer games** - Distributed game logic
+- **Development tools** - Share utilities between teams
 
-// Esperar a que otros peers se conecten
-setTimeout(async () => {
-  // Ejecutar funciones (locales o remotas automáticamente)
-  console.log(await MagicDef.suma(10, 5))      // 15
-  console.log(await MagicDef.resta(10, 3))     // 7
-  console.log(await MagicDef.multiplicar(4, 6)) // 24
-  console.log(await MagicDef.dividir(20, 4))   // 5
-}, 3000)
-```
-
-### Ejemplo 2: Chat con Funciones
-
-```javascript
-import MagicDef from 'magicdef'
-
-await MagicDef.connect('chat-funcional')
-
-// Función para procesar mensajes
-function procesarMensaje(mensaje) {
-  return `Mensaje procesado: ${mensaje.toUpperCase()}`
-}
-
-MagicDef.export(procesarMensaje)
-
-// Los otros peers pueden usar tu función
-// const resultado = await MagicDef.procesarMensaje('hola mundo')
-```
-
-## 🔍 Monitoreo y Debug
-
-MagicDef proporciona logs detallados para monitorear la actividad:
-
-```
-🔗 Peer conectado: a1b2c3
-📤 Enviando funciones al nuevo peer a1b2c3
-✅ Funciones cargadas del peer a1b2c3: 2 función(es)
-   - suma (a, b)
-   - multiplicar (x, y)
-📨 Recibida llamada a función: suma(5, 3)
-✅ Ejecutando función local: suma
-📤 Enviando resultado: 8
-```
-
-## ⚠️ Consideraciones de Seguridad
-
-- **Ejecución de código**: MagicDef ejecuta código recibido de otros peers
-- **Confianza**: Solo ejecuta funciones de peers en los que confíes
-- **Validación**: Considera validar parámetros antes de ejecutar funciones
-- **Redes privadas**: Usa topics únicos para redes privadas
-
-## 🤝 Contribuir
-
-1. Fork el repositorio
-2. Crea una rama para tu feature (`git checkout -b feature/nueva-funcionalidad`)
-3. Commit tus cambios (`git commit -am 'Agregar nueva funcionalidad'`)
-4. Push a la rama (`git push origin feature/nueva-funcionalidad`)
-5. Abre un Pull Request
-
-## 📄 Licencia
-
-Este proyecto está bajo la Licencia MIT - ver el archivo [LICENSE](LICENSE) para detalles.
-
-## 🔗 Enlaces Relacionados
-
-- [Hyperswarm](https://github.com/hyperswarm/hyperswarm) - Peer discovery y comunicación
-- [Holepunch](https://holepunch.to/) - Herramientas de networking P2P
+### 🎯 **Why MagicDef?**
+- **No VPN needed** - Connect peers directly without tunnels
+- **No Tailscale needed** - Automatic discovery without configuration
+- **No servers needed** - P2P communication without infrastructure
+- **No APIs needed** - Call functions directly as if they were local
+- **No WebSockets needed** - Automatic and persistent connections
+- **No gRPC needed** - Simple and transparent protocol
 
 ---
 
-**MagicDef** - Haciendo la programación distribuida más fácil 🚀
+## 📄 License
+
+This project is under the MIT License - see the [LICENSE](LICENSE) file for details.
+
+## 🔗 Related Links
+
+- [Hyperswarm](https://github.com/hyperswarm/hyperswarm) - Peer discovery and communication
+- [Holepunch](https://holepunch.to/) - P2P networking tools

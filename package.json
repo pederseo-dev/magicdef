@@ -1,7 +1,7 @@
 {
   "name": "magicdef",
-  "version": "1.0.0",
-  "description": "Peer-to-peer function sharing library using Hyperswarm",
+  "version": "1.0.1",
+  "description": "Peer-to-peer function calling and sharing library using Hyperswarm",
   "main": "./dist/magicdef.cjs",
   "module": "./src/index.js",
   "type": "module",
@@ -24,21 +24,13 @@
     "hyperswarm",
     "magicdef"
   ],
-  "author": "MagicDef Contributors",
+  "author": "olaf.acount@gmail.com",
   "license": "MIT",
-  "repository": {
-    "type": "git",
-    "url": "git+https://github.com/pederseo-dev/magicdef.git"
-  },
-  "bugs": {
-    "url": "https://github.com/pederseo-dev/magicdef/issues"
-  },
-  "homepage": "https://github.com/pederseo-dev/magicdef#readme",
+
   "files": [
     "src/",
     "dist/",
     "examples/",
-    "docs/",
     "README.md",
     "LICENSE"
   ],
