@@ -1,6 +1,6 @@
 {
   "name": "magicdef",
-  "version": "1.0.3",
+  "version": "1.0.2",
   "description": "Peer-to-peer function calling and sharing library using Hyperswarm",
   "main": "./dist/magicdef.cjs",
   "module": "./src/index.js",
