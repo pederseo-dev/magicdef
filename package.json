@@ -1,6 +1,6 @@
 {
   "name": "magicdef",
-  "version": "1.0.1",
+  "version": "1.0.2",
   "description": "Peer-to-peer function calling and sharing library using Hyperswarm",
   "main": "./dist/magicdef.cjs",
   "module": "./src/index.js",
@@ -26,7 +26,6 @@
   ],
   "author": "Olaf Pedersen",
   "license": "MIT",
-
   "files": [
     "src/",
     "dist/",
@@ -41,4 +40,4 @@
   "devDependencies": {
     "assert": "^2.1.0"
   }
-} 
+}
