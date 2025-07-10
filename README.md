@@ -101,8 +101,11 @@ function saludar(nombre) {
 chatRoom.export(saludar)
 
 // Use function from Peer 2
-const resultado = await chatRoom.calcular(5, 3)
-console.log(resultado) // 8
+async function results(){
+  const resultado = await chatRoom.calcular(5, 3)
+  console.log(resultado) // 8
+}
+results()
 ```
 
 **Peer 2 - Same chat room:**
@@ -118,8 +121,11 @@ function calcular(a, b) {
 chatRoom.export(calcular)
 
 // Use function from Peer 1
-const saludo = await chatRoom.saludar('World')
-console.log(saludo) // "Hello World!"
+async function results(){
+  const saludo = await chatRoom.saludar('World')
+  console.log(saludo) // "Hello World!"
+}
+results
 ```
 
 ## ⚠️ Error Handling
